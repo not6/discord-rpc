@@ -7,15 +7,27 @@
 
 template <typename ElementType, size_t QueueSize>
 class MsgQueue {
+private:
     ElementType queue_[QueueSize];
     std::atomic_uint nextAdd_{0};
     std::atomic_uint nextSend_{0};
     std::atomic_uint pendingSends_{0};
 
 public:
-    MsgQueue() {}
+    MsgQueue() noexcept = default;
 
-    ElementType* GetNextAddMessage()
+    void Reset() noexcept
+    {
+        nextAdd_.store(0);
+        nextSend_.store(0);
+        pendingSends_.store(0);
+    }
+
+    bool HavePendingSends() const noexcept { return pendingSends_.load() != 0; }
+    void CommitAdd() noexcept              { ++pendingSends_; }
+    void CommitSend() noexcept             { --pendingSends_; }
+
+    ElementType* GetNextAddMessage() noexcept
     {
         // if we are falling behind, bail
         if (pendingSends_.load() >= QueueSize) {
@@ -24,13 +36,10 @@ public:
         auto index = (nextAdd_++) % QueueSize;
         return &queue_[index];
     }
-    void CommitAdd() { ++pendingSends_; }
 
-    bool HavePendingSends() const { return pendingSends_.load() != 0; }
-    ElementType* GetNextSendMessage()
+    ElementType* GetNextSendMessage() noexcept
     {
         auto index = (nextSend_++) % QueueSize;
         return &queue_[index];
     }
-    void CommitSend() { --pendingSends_; }
 };
