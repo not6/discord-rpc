@@ -166,6 +166,13 @@ static void UpdateReconnectTime()
 }
 
 #ifdef DISCORD_DISABLE_IO_THREAD
+extern "C" DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void)
+{
+    return SendQueue.HavePendingSends();
+}
+#endif
+
+#ifdef DISCORD_DISABLE_IO_THREAD
 extern "C" DISCORD_EXPORT void Discord_UpdateConnection(void)
 #else
 static void Discord_UpdateConnection(void)

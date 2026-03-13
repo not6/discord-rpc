@@ -102,6 +102,7 @@ DISCORD_EXPORT void Discord_RunCallbacks(void);
 /* If you disable the lib starting its own io thread, you'll need to call this from your own */
 #ifdef DISCORD_DISABLE_IO_THREAD
 DISCORD_EXPORT void Discord_UpdateConnection(void);
+DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void);
 #endif
 
 DISCORD_EXPORT void Discord_UpdatePresence(const DiscordRichPresence* presence);
