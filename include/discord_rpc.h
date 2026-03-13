@@ -61,7 +61,7 @@ typedef struct DiscordEventHandlers {
     void (*ready)(const DiscordUser* user);
     void (*disconnected)(int errorCode, const char* message);
     void (*errored)(int errorCode, const char* message);
-    void (*debug)(char isOut, const char* opcodeName, const char* message, uint32_t messageLength);
+    void (*debug)(bool isOut, const char* opcodeName, const char* message, uint32_t messageLength);
     void (*joinGame)(const char* joinSecret);
     void (*spectateGame)(const char* spectateSecret);
     void (*joinRequest)(const DiscordUser* user);
