@@ -90,6 +90,10 @@ typedef struct DiscordEventHandlers {
 #define DISCORD_ACTIVITY_TYPE_CUSTOM 4
 #define DISCORD_ACTIVITY_TYPE_COMPETING 5
 
+#define DISCORD_UPDATE_FULL 0
+#define DISCORD_UPDATE_READ_ONLY 1
+#define DISCORD_UPDATE_WRITE_ONLY 2
+
 DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                        DiscordEventHandlers* handlers,
                                        bool autoRegister,
@@ -101,7 +105,7 @@ DISCORD_EXPORT void Discord_RunCallbacks(void);
 
 /* If you disable the lib starting its own io thread, you'll need to call this from your own */
 #ifdef DISCORD_DISABLE_IO_THREAD
-DISCORD_EXPORT void Discord_UpdateConnection(void);
+DISCORD_EXPORT void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type = DISCORD_UPDATE_FULL);
 DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void);
 #endif
 

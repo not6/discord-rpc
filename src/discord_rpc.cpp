@@ -113,7 +113,7 @@ static int Pid{0};
 static int Nonce{1};
 
 #ifndef DISCORD_DISABLE_IO_THREAD
-static void Discord_UpdateConnection(void);
+static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type = DISCORD_UPDATE_FULL);
 class IoThreadHolder {
 private:
     std::atomic_bool keepRunning;
@@ -173,9 +173,9 @@ extern "C" DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void)
 #endif
 
 #ifdef DISCORD_DISABLE_IO_THREAD
-extern "C" DISCORD_EXPORT void Discord_UpdateConnection(void)
+extern "C" DISCORD_EXPORT void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCORD_UPDATE_FULL*/)
 #else
-static void Discord_UpdateConnection(void)
+static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCORD_UPDATE_FULL*/)
 #endif
 {
     if (!Connection) {
@@ -190,146 +190,149 @@ static void Discord_UpdateConnection(void)
     }
     else {
         // reads
+        if (type != DISCORD_UPDATE_WRITE_ONLY) {
+            for (;;) {
+                JsonDocument message;
 
-        for (;;) {
-            JsonDocument message;
+                if (!Connection->Read(message)) {
+                    break;
+                }
 
-            if (!Connection->Read(message)) {
-                break;
-            }
+                const char* evtName = GetStrMember(&message, "evt");
+                const char* nonce = GetStrMember(&message, "nonce");
 
-            const char* evtName = GetStrMember(&message, "evt");
-            const char* nonce = GetStrMember(&message, "nonce");
+                if (nonce) {
+                    // in responses only -- should use to match up response when needed.
 
-            if (nonce) {
-                // in responses only -- should use to match up response when needed.
+                    if (evtName && strcmp(evtName, "ERROR") == 0) {
+                        auto data = GetObjMember(&message, "data");
+                        LastErrorCode = GetIntMember(data, "code");
+                        StringCopy(LastErrorMessage, GetStrMember(data, "message", ""));
+                        GotErrorMessage.store(true);
+                    }
+                }
+                else {
+                    // should have evt == name of event, optional data
+                    if (evtName == nullptr) {
+                        continue;
+                    }
 
-                if (evtName && strcmp(evtName, "ERROR") == 0) {
                     auto data = GetObjMember(&message, "data");
-                    LastErrorCode = GetIntMember(data, "code");
-                    StringCopy(LastErrorMessage, GetStrMember(data, "message", ""));
-                    GotErrorMessage.store(true);
-                }
-            }
-            else {
-                // should have evt == name of event, optional data
-                if (evtName == nullptr) {
-                    continue;
-                }
 
-                auto data = GetObjMember(&message, "data");
-
-                if (strcmp(evtName, "ACTIVITY_JOIN") == 0) {
-                    auto secret = GetStrMember(data, "secret");
-                    if (secret) {
-                        StringCopy(JoinGameSecret, secret);
-                        WasJoinGame.store(true);
+                    if (strcmp(evtName, "ACTIVITY_JOIN") == 0) {
+                        auto secret = GetStrMember(data, "secret");
+                        if (secret) {
+                            StringCopy(JoinGameSecret, secret);
+                            WasJoinGame.store(true);
+                        }
                     }
-                }
-                else if (strcmp(evtName, "ACTIVITY_SPECTATE") == 0) {
-                    auto secret = GetStrMember(data, "secret");
-                    if (secret) {
-                        StringCopy(SpectateGameSecret, secret);
-                        WasSpectateGame.store(true);
+                    else if (strcmp(evtName, "ACTIVITY_SPECTATE") == 0) {
+                        auto secret = GetStrMember(data, "secret");
+                        if (secret) {
+                            StringCopy(SpectateGameSecret, secret);
+                            WasSpectateGame.store(true);
+                        }
                     }
-                }
-                else if (strcmp(evtName, "ACTIVITY_JOIN_REQUEST") == 0) {
-                    auto user = GetObjMember(data, "user");
-                    auto userId = GetStrMember(user, "id");
-                    auto username = GetStrMember(user, "username");
-                    auto joinReq = JoinAskQueue.GetNextAddMessage();
-                    if (userId && username && joinReq) {
-                        StringCopy(joinReq->userId, userId);
-                        StringCopy(joinReq->username, username);
-                        StringCopyOptional(joinReq->discriminator,
-                                           GetStrMember(user, "discriminator"));
-                        StringCopyOptional(joinReq->globalName, GetStrMember(user, "global_name"));
-                        StringCopyOptional(joinReq->avatar, GetStrMember(user, "avatar"));
-                        JoinAskQueue.CommitAdd();
-                    }
-                }
-                else if (strcmp(evtName, "ACTIVITY_INVITE") == 0) {
-                    auto inviteReq = InviteQueue.GetNextAddMessage();
-                    if (inviteReq) {
+                    else if (strcmp(evtName, "ACTIVITY_JOIN_REQUEST") == 0) {
                         auto user = GetObjMember(data, "user");
                         auto userId = GetStrMember(user, "id");
                         auto username = GetStrMember(user, "username");
-                        if (userId && username) {
-                            StringCopy(inviteReq->user.userId, userId);
-                            StringCopy(inviteReq->user.username, username);
-                            StringCopyOptional(inviteReq->user.discriminator,
-                                               GetStrMember(user, "discriminator"));
-                            StringCopyOptional(inviteReq->user.globalName,
-                                               GetStrMember(user, "global_name"));
-                            StringCopyOptional(inviteReq->user.avatar,
-                                               GetStrMember(user, "avatar"));
+                        auto joinReq = JoinAskQueue.GetNextAddMessage();
+                        if (userId && username && joinReq) {
+                            StringCopy(joinReq->userId, userId);
+                            StringCopy(joinReq->username, username);
+                            StringCopyOptional(joinReq->discriminator,
+                                            GetStrMember(user, "discriminator"));
+                            StringCopyOptional(joinReq->globalName, GetStrMember(user, "global_name"));
+                            StringCopyOptional(joinReq->avatar, GetStrMember(user, "avatar"));
+                            JoinAskQueue.CommitAdd();
                         }
-                        auto activity = GetObjMember(data, "activity");
-                        if (activity) {
-                            StringCopyOptional(inviteReq->activity.state,
-                                               GetStrMember(activity, "state"));
-                            StringCopyOptional(inviteReq->activity.details,
-                                               GetStrMember(activity, "details"));
-                            auto timestamps = GetObjMember(activity, "timestamps");
-                            if (timestamps) {
-                                inviteReq->activity.startTimestamp =
-                                  GetInt64Member(timestamps, "start");
-                                inviteReq->activity.endTimestamp =
-                                  GetInt64Member(timestamps, "end");
+                    }
+                    else if (strcmp(evtName, "ACTIVITY_INVITE") == 0) {
+                        auto inviteReq = InviteQueue.GetNextAddMessage();
+                        if (inviteReq) {
+                            auto user = GetObjMember(data, "user");
+                            auto userId = GetStrMember(user, "id");
+                            auto username = GetStrMember(user, "username");
+                            if (userId && username) {
+                                StringCopy(inviteReq->user.userId, userId);
+                                StringCopy(inviteReq->user.username, username);
+                                StringCopyOptional(inviteReq->user.discriminator,
+                                                GetStrMember(user, "discriminator"));
+                                StringCopyOptional(inviteReq->user.globalName,
+                                                GetStrMember(user, "global_name"));
+                                StringCopyOptional(inviteReq->user.avatar,
+                                                GetStrMember(user, "avatar"));
                             }
-                            auto assets = GetObjMember(activity, "assets");
-                            if (assets) {
-                                StringCopyOptional(inviteReq->activity.largeImageKey,
-                                                   GetStrMember(assets, "large_image"));
-                                StringCopyOptional(inviteReq->activity.largeImageText,
-                                                   GetStrMember(assets, "large_text"));
-                                StringCopyOptional(inviteReq->activity.smallImageKey,
-                                                   GetStrMember(assets, "small_image"));
-                                StringCopyOptional(inviteReq->activity.smallImageText,
-                                                   GetStrMember(assets, "small_text"));
-                            }
-                            auto party = GetObjMember(activity, "party");
-                            if (party) {
-                                StringCopyOptional(inviteReq->activity.partyId,
-                                                   GetStrMember(party, "id"));
-                                auto* size0 = GetArrMember(party, "size", 0);
-                                if (size0 && size0->IsInt()) {
-                                    inviteReq->activity.partySize = size0->GetInt();
+                            auto activity = GetObjMember(data, "activity");
+                            if (activity) {
+                                StringCopyOptional(inviteReq->activity.state,
+                                                GetStrMember(activity, "state"));
+                                StringCopyOptional(inviteReq->activity.details,
+                                                GetStrMember(activity, "details"));
+                                auto timestamps = GetObjMember(activity, "timestamps");
+                                if (timestamps) {
+                                    inviteReq->activity.startTimestamp =
+                                    GetInt64Member(timestamps, "start");
+                                    inviteReq->activity.endTimestamp =
+                                    GetInt64Member(timestamps, "end");
                                 }
-                                auto* size1 = GetArrMember(party, "size", 1);
-                                if (size1 && size1->IsInt()) {
-                                    inviteReq->activity.partyMax = size1->GetInt();
+                                auto assets = GetObjMember(activity, "assets");
+                                if (assets) {
+                                    StringCopyOptional(inviteReq->activity.largeImageKey,
+                                                    GetStrMember(assets, "large_image"));
+                                    StringCopyOptional(inviteReq->activity.largeImageText,
+                                                    GetStrMember(assets, "large_text"));
+                                    StringCopyOptional(inviteReq->activity.smallImageKey,
+                                                    GetStrMember(assets, "small_image"));
+                                    StringCopyOptional(inviteReq->activity.smallImageText,
+                                                    GetStrMember(assets, "small_text"));
+                                }
+                                auto party = GetObjMember(activity, "party");
+                                if (party) {
+                                    StringCopyOptional(inviteReq->activity.partyId,
+                                                    GetStrMember(party, "id"));
+                                    auto* size0 = GetArrMember(party, "size", 0);
+                                    if (size0 && size0->IsInt()) {
+                                        inviteReq->activity.partySize = size0->GetInt();
+                                    }
+                                    auto* size1 = GetArrMember(party, "size", 1);
+                                    if (size1 && size1->IsInt()) {
+                                        inviteReq->activity.partyMax = size1->GetInt();
+                                    }
                                 }
                             }
+                            inviteReq->type = GetIntMember(data, "type");
+                            StringCopyOptional(inviteReq->channelId, GetStrMember(user, "channel_id"));
+                            StringCopyOptional(inviteReq->messageId, GetStrMember(user, "message_id"));
+                            InviteQueue.CommitAdd();
                         }
-                        inviteReq->type = GetIntMember(data, "type");
-                        StringCopyOptional(inviteReq->channelId, GetStrMember(user, "channel_id"));
-                        StringCopyOptional(inviteReq->messageId, GetStrMember(user, "message_id"));
-                        InviteQueue.CommitAdd();
                     }
                 }
             }
         }
 
         // writes
-        if (UpdatePresence.exchange(false) && QueuedPresence.length) {
-            QueuedMessage local;
-            {
-                std::lock_guard<std::mutex> guard(PresenceMutex);
-                local.Copy(QueuedPresence);
+        if (type != DISCORD_UPDATE_READ_ONLY) {
+            if (UpdatePresence.exchange(false) && QueuedPresence.length) {
+                QueuedMessage local;
+                {
+                    std::lock_guard<std::mutex> guard(PresenceMutex);
+                    local.Copy(QueuedPresence);
+                }
+                if (!Connection->Write(local.buffer, local.length)) {
+                    // if we fail to send, requeue
+                    std::lock_guard<std::mutex> guard(PresenceMutex);
+                    QueuedPresence.Copy(local);
+                    UpdatePresence.exchange(true);
+                }
             }
-            if (!Connection->Write(local.buffer, local.length)) {
-                // if we fail to send, requeue
-                std::lock_guard<std::mutex> guard(PresenceMutex);
-                QueuedPresence.Copy(local);
-                UpdatePresence.exchange(true);
-            }
-        }
 
-        while (SendQueue.HavePendingSends()) {
-            auto qmessage = SendQueue.GetNextSendMessage();
-            Connection->Write(qmessage->buffer, qmessage->length);
-            SendQueue.CommitSend();
+            while (SendQueue.HavePendingSends()) {
+                auto qmessage = SendQueue.GetNextSendMessage();
+                Connection->Write(qmessage->buffer, qmessage->length);
+                SendQueue.CommitSend();
+            }
         }
     }
 }
