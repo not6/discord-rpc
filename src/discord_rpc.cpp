@@ -464,6 +464,7 @@ extern "C" DISCORD_EXPORT void Discord_Shutdown(void)
     QueuedPresence.length = 0;
     UpdatePresence.exchange(false);
     IoThread.Stop();
+    SendQueue.Reset();
 
     RpcConnection::Destroy(Connection);
 }
