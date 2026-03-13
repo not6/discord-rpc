@@ -374,7 +374,7 @@ static bool DeregisterForEvent(const char* evtName)
 
 extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                                   DiscordEventHandlers* handlers,
-                                                  int autoRegister,
+                                                  bool autoRegister,
                                                   const char* optionalSteamId)
 {
     if (autoRegister) {

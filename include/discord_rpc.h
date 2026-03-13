@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdbool.h>
 
 // clang-format off
 
@@ -91,7 +92,7 @@ typedef struct DiscordEventHandlers {
 
 DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                        DiscordEventHandlers* handlers,
-                                       int autoRegister,
+                                       bool autoRegister,
                                        const char* optionalSteamId);
 DISCORD_EXPORT void Discord_Shutdown(void);
 
