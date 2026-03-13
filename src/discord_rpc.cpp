@@ -137,7 +137,6 @@ public:
     }
 
     void Notify() { waitForIOActivity.notify_all(); }
-    void Unnotify() {}
 
     void Stop()
     {
@@ -148,20 +147,14 @@ public:
         }
     }
 
-    bool IsIOPending() { return false; }
-
     ~IoThreadHolder() { Stop(); }
 };
 #else
 class IoThreadHolder {
-private:
-    bool ioPending{false};
 public:
-    bool IsIOPending() { return ioPending; }
-    void Notify() { ioPending = true; }
-    void Unnotify() { ioPending = false; }
-    void Start() { Unnotify(); }
-    void Stop() { Unnotify(); }
+    void Notify() {}
+    void Start() {}
+    void Stop() {}
 };
 #endif // DISCORD_DISABLE_IO_THREAD
 static IoThreadHolder IoThread{};
@@ -181,13 +174,6 @@ static void Discord_UpdateConnection(void)
     if (!Connection) {
         return;
     }
-
-#ifdef DISCORD_DISABLE_IO_THREAD
-    if (!IoThread.IsIOPending()) {
-        return;
-    }
-    IoThread.Unnotify();
-#endif
 
     if (!Connection->IsOpen()) {
         if (std::chrono::system_clock::now() >= NextConnect) {
@@ -385,6 +371,8 @@ extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
             Discord_Register(applicationId, nullptr);
         }
     }
+
+    Pid = GetProcessId();
 
     {
         std::lock_guard<std::mutex> guard(HandlerMutex);
