@@ -379,8 +379,6 @@ extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
         }
     }
 
-    Pid = GetProcessId();
-
     {
         std::lock_guard<std::mutex> guard(HandlerMutex);
 
