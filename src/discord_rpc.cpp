@@ -137,6 +137,7 @@ public:
     }
 
     void Notify() { waitForIOActivity.notify_all(); }
+    void Unnotify() {}
 
     void Stop()
     {
@@ -147,17 +148,23 @@ public:
         }
     }
 
+    bool IsIOPending() { return false; }
+
     ~IoThreadHolder() { Stop(); }
 };
 #else
 class IoThreadHolder {
+private:
+    bool ioPending{false};
 public:
-    void Start() {}
-    void Stop() {}
-    void Notify() {}
+    bool IsIOPending() { return ioPending; }
+    void Notify() { ioPending = true; }
+    void Unnotify() { ioPending = false; }
+    void Start() { Unnotify(); }
+    void Stop() { Unnotify(); }
 };
 #endif // DISCORD_DISABLE_IO_THREAD
-static IoThreadHolder* IoThread{nullptr};
+static IoThreadHolder IoThread{};
 
 static void UpdateReconnectTime()
 {
@@ -174,6 +181,13 @@ static void Discord_UpdateConnection(void)
     if (!Connection) {
         return;
     }
+
+#ifdef DISCORD_DISABLE_IO_THREAD
+    if (!IoThread.IsIOPending()) {
+        return;
+    }
+    IoThread.Unnotify();
+#endif
 
     if (!Connection->IsOpen()) {
         if (std::chrono::system_clock::now() >= NextConnect) {
@@ -329,9 +343,7 @@ static void Discord_UpdateConnection(void)
 
 static void SignalIOActivity()
 {
-    if (IoThread != nullptr) {
-        IoThread->Notify();
-    }
+    IoThread.Notify();
 }
 
 static bool RegisterForEvent(const char* evtName)
@@ -365,11 +377,6 @@ extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                                   int autoRegister,
                                                   const char* optionalSteamId)
 {
-    IoThread = new (std::nothrow) IoThreadHolder();
-    if (IoThread == nullptr) {
-        return;
-    }
-
     if (autoRegister) {
         if (optionalSteamId && optionalSteamId[0]) {
             Discord_RegisterSteamGame(applicationId, optionalSteamId);
@@ -447,7 +454,7 @@ extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
         }
     };
 
-    IoThread->Start();
+    IoThread.Start();
 }
 
 extern "C" DISCORD_EXPORT void Discord_Shutdown(void)
@@ -461,10 +468,7 @@ extern "C" DISCORD_EXPORT void Discord_Shutdown(void)
     Handlers = {};
     QueuedPresence.length = 0;
     UpdatePresence.exchange(false);
-    if (IoThread != nullptr) {
-        delete IoThread;
-        IoThread = nullptr;
-    }
+    IoThread.Stop();
 
     RpcConnection::Destroy(Connection);
 }
