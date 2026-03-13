@@ -462,7 +462,6 @@ extern "C" DISCORD_EXPORT void Discord_Shutdown(void)
     QueuedPresence.length = 0;
     UpdatePresence.exchange(false);
     if (IoThread != nullptr) {
-        IoThread->Stop();
         delete IoThread;
         IoThread = nullptr;
     }
