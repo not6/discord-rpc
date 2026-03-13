@@ -107,7 +107,7 @@ DISCORD_EXPORT void Discord_UpdateConnection(void);
 DISCORD_EXPORT void Discord_UpdatePresence(const DiscordRichPresence* presence);
 DISCORD_EXPORT void Discord_ClearPresence(void);
 
-DISCORD_EXPORT void Discord_Respond(const char* userid, /* DISCORD_REPLY_ */ int reply);
+DISCORD_EXPORT void Discord_Respond(const char* userid, /* DISCORD_REPLY_ */ int8_t reply);
 
 DISCORD_EXPORT void Discord_AcceptInvite(const char* userId,
                                          /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
