@@ -192,7 +192,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
         // reads
         if (type != WriteOnly) {
             for (;;) {
-                JsonDocument message;
+                static JsonDocument message;
 
                 if (!Connection->Read(message)) {
                     break;
@@ -318,7 +318,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
         // writes
         if (type != ReadOnly) {
             if (UpdatePresence.exchange(false) && QueuedPresence.length) {
-                QueuedMessage local;
+                static QueuedMessage local;
                 {
                     std::lock_guard<std::mutex> guard(PresenceMutex);
                     local.Copy(QueuedPresence);

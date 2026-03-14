@@ -42,7 +42,7 @@ void RpcConnection::Open()
     }
 
     if (state == State::SentHandshake) {
-        JsonDocument message;
+        static JsonDocument message;
         if (Read(message)) {
             auto cmd = GetStrMember(&message, "cmd");
             auto evt = GetStrMember(&message, "evt");
@@ -99,7 +99,7 @@ bool RpcConnection::Read(JsonDocument& message)
     if (state != State::Connected && state != State::SentHandshake) {
         return false;
     }
-    MessageFrame readFrame;
+    static MessageFrame readFrame;
     for (;;) {
         bool didRead = connection->Read(&readFrame, sizeof(MessageFrameHeader));
         if (!didRead) {
