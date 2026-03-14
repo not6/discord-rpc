@@ -12,6 +12,7 @@ struct RpcConnection {
         Success = 0,
         PipeClosed = 1,
         ReadCorrupt = 2,
+        JsonCorrupt = 3,
     };
 
     enum class Opcode : uint32_t {

@@ -6,6 +6,17 @@
 static const int RpcVersion = 1;
 static RpcConnection Instance;
 
+// returns true if there was no failure
+static bool CheckAndHandleJsonParseFailure(RpcConnection* connection, JsonDocument& message)
+{
+    if (message.HasParseError()) {
+        connection->lastErrorCode = (int)RpcConnection::ErrorCode::JsonCorrupt;
+        StringCopy(connection->lastErrorMessage, "Json parse failure");
+        return false;
+    }
+    return true;
+}
+
 /*static*/ RpcConnection* RpcConnection::Create(const char* applicationId)
 {
     Instance.connection = BaseConnection::Create();
@@ -117,6 +128,9 @@ bool RpcConnection::Read(JsonDocument& message)
         switch (readFrame.opcode) {
         case Opcode::Close: {
             message.ParseInsitu(readFrame.message);
+            if (!CheckAndHandleJsonParseFailure(this, message)) {
+                return false;
+            }
             lastErrorCode = GetIntMember(&message, "code");
             StringCopy(lastErrorMessage, GetStrMember(&message, "message", ""));
             Close();
@@ -124,7 +138,7 @@ bool RpcConnection::Read(JsonDocument& message)
         }
         case Opcode::Frame:
             message.ParseInsitu(readFrame.message);
-            return true;
+            return CheckAndHandleJsonParseFailure(this, message);
         case Opcode::Ping:
             readFrame.opcode = Opcode::Pong;
             if (onDebug)
