@@ -65,7 +65,7 @@ struct Activity {
     int partySize;
     int partyMax;
 
-    int partyPrivacy;
+    DiscordPartyPrivacy partyPrivacy;
     char matchSecret[128];
     char joinSecret[128];
     char spectateSecret[128];
@@ -76,7 +76,7 @@ struct Activity {
 struct Invite {
     User user;
     Activity activity;
-    /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type;
+    DiscordActivityActionType type;
     char sessionId[128];
     char channelId[128];
     char messageId[128];
@@ -113,7 +113,7 @@ static int Pid{0};
 static int Nonce{1};
 
 #ifndef DISCORD_DISABLE_IO_THREAD
-static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type = DISCORD_UPDATE_FULL);
+static void Discord_UpdateConnection(DiscordConnectionUpdateType type = Full);
 class IoThreadHolder {
 private:
     std::atomic_bool keepRunning;
@@ -173,9 +173,9 @@ extern "C" DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void)
 #endif
 
 #ifdef DISCORD_DISABLE_IO_THREAD
-extern "C" DISCORD_EXPORT void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCORD_UPDATE_FULL*/)
+extern "C" DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/)
 #else
-static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCORD_UPDATE_FULL*/)
+static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/)
 #endif
 {
     if (!Connection) {
@@ -190,7 +190,7 @@ static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCO
     }
     else {
         // reads
-        if (type != DISCORD_UPDATE_WRITE_ONLY) {
+        if (type != WriteOnly) {
             for (;;) {
                 JsonDocument message;
 
@@ -304,7 +304,7 @@ static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCO
                                         }
                                     }
                                 }
-                                inviteReq->type = GetIntMember(data, "type");
+                                inviteReq->type = (DiscordActivityActionType)GetIntMember(data, "type");
                                 StringCopyOptional(inviteReq->channelId, GetStrMember(user, "channel_id"));
                                 StringCopyOptional(inviteReq->messageId, GetStrMember(user, "message_id"));
                                 InviteQueue.CommitAdd();
@@ -316,7 +316,7 @@ static void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type/* = DISCO
         }
 
         // writes
-        if (type != DISCORD_UPDATE_READ_ONLY) {
+        if (type != ReadOnly) {
             if (UpdatePresence.exchange(false) && QueuedPresence.length) {
                 QueuedMessage local;
                 {
@@ -491,7 +491,7 @@ extern "C" DISCORD_EXPORT void Discord_ClearPresence(void)
     Discord_UpdatePresence(nullptr);
 }
 
-extern "C" DISCORD_EXPORT void Discord_Respond(const char* userId, /* DISCORD_REPLY_ */ int8_t reply)
+extern "C" DISCORD_EXPORT void Discord_Respond(const char* userId, DiscordJoinResponse reply)
 {
     // if we are not connected, let's not batch up stale messages for later
     if (!Connection || !Connection->IsOpen()) {
@@ -507,7 +507,7 @@ extern "C" DISCORD_EXPORT void Discord_Respond(const char* userId, /* DISCORD_RE
 }
 
 extern "C" DISCORD_EXPORT void Discord_AcceptInvite(const char* userId,
-                                                    /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+                                                    DiscordActivityActionType type,
                                                     const char* sessionId,
                                                     const char* channelId,
                                                     const char* messageId)
@@ -531,7 +531,7 @@ extern "C" DISCORD_EXPORT void Discord_AcceptInvite(const char* userId,
     }
 }
 
-extern "C" DISCORD_EXPORT void Discord_OpenActivityInvite(int8_t type)
+extern "C" DISCORD_EXPORT void Discord_OpenActivityInvite(DiscordActivityActionType type)
 {
     // if we are not connected, let's not batch up stale messages for later
     if (!Connection || !Connection->IsOpen()) {

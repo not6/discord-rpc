@@ -24,6 +24,31 @@
 extern "C" {
 #endif
 
+enum DiscordJoinResponse : int8_t {
+    No,
+    Yes,
+    Ignore, // same as no
+};
+
+enum DiscordPartyPrivacy : int8_t {
+    Private,
+    Public,
+};
+
+enum DiscordActivityActionType : int8_t {
+    Join = 1,
+    Spectate,
+};
+
+enum DiscordActivityType : int8_t {
+    Playing,
+    Streaming,
+    Listening,
+    Watching,
+    Custom,
+    Competing,
+};
+
 typedef struct DiscordButton {
     const char* label;
     const char* url;
@@ -65,7 +90,7 @@ typedef struct DiscordEventHandlers {
     void (*joinGame)(const char* joinSecret);
     void (*spectateGame)(const char* spectateSecret);
     void (*joinRequest)(const DiscordUser* user);
-    void (*invited)(/* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+    void (*invited)(DiscordActivityActionType type,
                     const DiscordUser* user,
                     const DiscordRichPresence* activity,
                     const char* sessionId,
@@ -73,26 +98,11 @@ typedef struct DiscordEventHandlers {
                     const char* messageId);
 } DiscordEventHandlers;
 
-#define DISCORD_REPLY_NO 0
-#define DISCORD_REPLY_YES 1
-#define DISCORD_REPLY_IGNORE 2
-
-#define DISCORD_PARTY_PRIVATE 0
-#define DISCORD_PARTY_PUBLIC 1
-
-#define DISCORD_ACTIVITY_ACTION_TYPE_JOIN 1
-#define DISCORD_ACTIVITY_ACTION_TYPE_SPECTATE 2
-
-#define DISCORD_ACTIVITY_TYPE_PLAYING 0
-#define DISCORD_ACTIVITY_TYPE_STREAMING 1
-#define DISCORD_ACTIVITY_TYPE_LISTENING 2
-#define DISCORD_ACTIVITY_TYPE_WATCHING 3
-#define DISCORD_ACTIVITY_TYPE_CUSTOM 4
-#define DISCORD_ACTIVITY_TYPE_COMPETING 5
-
-#define DISCORD_UPDATE_FULL 0
-#define DISCORD_UPDATE_READ_ONLY 1
-#define DISCORD_UPDATE_WRITE_ONLY 2
+enum DiscordConnectionUpdateType : int8_t {
+    Full,
+    ReadOnly,
+    WriteOnly,
+};
 
 DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                        DiscordEventHandlers* handlers,
@@ -105,22 +115,22 @@ DISCORD_EXPORT void Discord_RunCallbacks(void);
 
 /* If you disable the lib starting its own io thread, you'll need to call this from your own */
 #ifdef DISCORD_DISABLE_IO_THREAD
-DISCORD_EXPORT void Discord_UpdateConnection(/* DISCORD_UPDATE_ */ int8_t type = DISCORD_UPDATE_FULL);
+DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type = Full);
 DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void);
 #endif
 
 DISCORD_EXPORT void Discord_UpdatePresence(const DiscordRichPresence* presence);
 DISCORD_EXPORT void Discord_ClearPresence(void);
 
-DISCORD_EXPORT void Discord_Respond(const char* userid, /* DISCORD_REPLY_ */ int8_t reply);
+DISCORD_EXPORT void Discord_Respond(const char* userid, DiscordJoinResponse reply);
 
 DISCORD_EXPORT void Discord_AcceptInvite(const char* userId,
-                                         /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+                                         DiscordActivityActionType type,
                                          const char* sessionId,
                                          const char* channelId,
                                          const char* messageId);
 
-DISCORD_EXPORT void Discord_OpenActivityInvite(/* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type);
+DISCORD_EXPORT void Discord_OpenActivityInvite(DiscordActivityActionType type);
 DISCORD_EXPORT void Discord_OpenGuildInvite(const char* code);
 
 DISCORD_EXPORT void Discord_UpdateHandlers(DiscordEventHandlers* handlers);

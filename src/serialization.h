@@ -1,5 +1,6 @@
 #pragma once
 
+#include "discord_rpc.h"
 #include <stdint.h>
 
 #ifndef __MINGW32__
@@ -56,7 +57,6 @@ inline size_t StringCopyOptional(char (&dest)[Len], const char* src)
 size_t JsonWriteHandshakeObj(char* dest, size_t maxLen, int version, const char* applicationId);
 
 // Commands
-struct DiscordRichPresence;
 size_t JsonWriteRichPresenceObj(char* dest,
                                 size_t maxLen,
                                 int nonce,
@@ -66,12 +66,12 @@ size_t JsonWriteSubscribeCommand(char* dest, size_t maxLen, int nonce, const cha
 
 size_t JsonWriteUnsubscribeCommand(char* dest, size_t maxLen, int nonce, const char* evtName);
 
-size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, int8_t reply, int nonce);
+size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, DiscordJoinResponse reply, int nonce);
 
 size_t JsonWriteAcceptInvite(char* dest,
                              size_t maxLen,
                              const char* userId,
-                             /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+                             DiscordActivityActionType type,
                              const char* sessionId,
                              const char* channelId,
                              const char* messageId,
@@ -79,7 +79,7 @@ size_t JsonWriteAcceptInvite(char* dest,
 
 size_t JsonWriteOpenOverlayActivityInvite(char* dest,
                                           size_t maxLen,
-                                          int8_t type,
+                                          DiscordActivityActionType type,
                                           int nonce,
                                           int pid);
 

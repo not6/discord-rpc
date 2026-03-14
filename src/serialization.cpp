@@ -240,7 +240,7 @@ size_t JsonWriteUnsubscribeCommand(char* dest, size_t maxLen, int nonce, const c
     return writer.Size();
 }
 
-size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, int8_t reply, int nonce)
+size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, DiscordJoinResponse reply, int nonce)
 {
     JsonWriter writer(dest, maxLen);
 
@@ -248,7 +248,7 @@ size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, int8_t 
         WriteObject obj(writer);
 
         WriteKey(writer, "cmd");
-        if (reply == DISCORD_REPLY_YES) {
+        if (reply == Yes) {
             writer.String("SEND_ACTIVITY_JOIN_INVITE");
         }
         else {
@@ -272,7 +272,7 @@ size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, int8_t 
 size_t JsonWriteAcceptInvite(char* dest,
                              size_t maxLen,
                              const char* userId,
-                             /* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+                             DiscordActivityActionType type,
                              const char* sessionId,
                              const char* channelId,
                              const char* messageId,
@@ -314,7 +314,7 @@ size_t JsonWriteAcceptInvite(char* dest,
 
 size_t JsonWriteOpenOverlayActivityInvite(char* dest,
                                           size_t maxLen,
-                                          int8_t type,
+                                          DiscordActivityActionType type,
                                           int nonce,
                                           int pid)
 {

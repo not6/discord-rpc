@@ -50,7 +50,7 @@ static void updateDiscordPresence()
         discordPresence.partyId = "party1234";
         discordPresence.partySize = 1;
         discordPresence.partyMax = 6;
-        discordPresence.partyPrivacy = DISCORD_PARTY_PUBLIC;
+        discordPresence.partyPrivacy = DiscordPartyPrivacyType::Public;
         discordPresence.matchSecret = "xyzzy";
         discordPresence.joinSecret = "join";
         discordPresence.spectateSecret = "look";
@@ -133,7 +133,7 @@ static void handleDiscordSpectate(const char* secret)
 
 static void handleDiscordJoinRequest(const DiscordUser* request)
 {
-    int response = -1;
+    DiscordJoinResponse response = -1;
     char yn[4];
     printf("\nDiscord: join request from %s#%s - %s\n",
            request->username,
@@ -150,12 +150,12 @@ static void handleDiscordJoinRequest(const DiscordUser* request)
         }
 
         if (yn[0] == 'y') {
-            response = DISCORD_REPLY_YES;
+            response = DiscordJoinResponse::Yes;
             break;
         }
 
         if (yn[0] == 'n') {
-            response = DISCORD_REPLY_NO;
+            response = DiscordJoinResponse::No;
             break;
         }
     } while (1);
@@ -164,7 +164,7 @@ static void handleDiscordJoinRequest(const DiscordUser* request)
     }
 }
 
-static void handleDiscordInvited(/* DISCORD_ACTIVITY_ACTION_TYPE_ */ int8_t type,
+static void handleDiscordInvited(DiscordActivityActionType type,
                                  const DiscordUser* user,
                                  const DiscordRichPresence* activity,
                                  const char* sessionId,
