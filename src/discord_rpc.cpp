@@ -69,7 +69,7 @@ struct Activity {
     char matchSecret[128];
     char joinSecret[128];
     char spectateSecret[128];
-    int8_t instance;
+    bool instance;
     const DiscordButton* buttons;
 };
 
