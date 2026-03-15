@@ -115,10 +115,16 @@ size_t JsonWriteRichPresenceObj(char* dest,
                     writer.Int((int)presence->flags);
                 }
 
-                WriteOptionalString(writer, "state", presence->state);
-                WriteOptionalString(writer, "state_url", presence->stateUrl);
+                if (presence->statusDisplayType != DiscordStatusDisplayType::Name) {
+                    WriteKey(writer, "status_display_type");
+                    writer.Int((int)presence->statusDisplayType);
+                }
+
+                WriteOptionalString(writer, "name", presence->name);
                 WriteOptionalString(writer, "details", presence->details);
                 WriteOptionalString(writer, "details_url", presence->detailsUrl);
+                WriteOptionalString(writer, "state", presence->state);
+                WriteOptionalString(writer, "state_url", presence->stateUrl);
 
                 if (presence->startTimestamp || presence->endTimestamp) {
                     WriteObject timestamps(writer, "timestamps");
@@ -161,6 +167,18 @@ size_t JsonWriteRichPresenceObj(char* dest,
                     }
                 }
 
+                if ((presence->emojiName && presence->emojiName[0]) ||
+                    (presence->emojiId && presence->emojiId[0]) || presence->emojiAnimated) {
+                    WriteObject emoji(writer, "emoji");
+                    WriteOptionalString(writer, "name", presence->emojiName);
+                    WriteOptionalString(writer, "id", presence->emojiId);
+
+                    if (presence->emojiAnimated) {
+                        writer.Key("animated");
+                        writer.Bool(presence->emojiAnimated);
+                    }
+                }
+
                 // Send secrets only when buttons aren't set
                 if (!presence->buttons) {
                     if ((presence->matchSecret && presence->matchSecret[0]) ||
@@ -173,8 +191,10 @@ size_t JsonWriteRichPresenceObj(char* dest,
                     }
                 }
 
-                writer.Key("instance");
-                writer.Bool(presence->instance);
+                if (presence->instance) {
+                    writer.Key("instance");
+                    writer.Bool(presence->instance);
+                }
 
                 if (presence->buttons) {
                     WriteArray buttons(writer, "buttons");

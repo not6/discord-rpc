@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 
+#include <memory>
 #include <atomic>
 #include <chrono>
 #include <mutex>
@@ -16,6 +17,8 @@
 #include <condition_variable>
 #include <thread>
 #endif
+
+#include "deleters.h"
 
 constexpr size_t MaxMessageSize{16 * 1024};
 constexpr size_t MessageQueueSize{8};
@@ -54,10 +57,13 @@ struct User {
 
 struct Activity {
     DiscordActivityType type;
-    char state[128];
-    char stateUrl[128];
+    DiscordActivityFlags flags;
+    DiscordStatusDisplayType statusDisplayType;
+    char name[128];
     char details[128];
     char detailsUrl[128];
+    char state[128];
+    char stateUrl[128];
     int64_t startTimestamp;
     int64_t endTimestamp;
     char largeImageKey[32];
@@ -67,13 +73,14 @@ struct Activity {
     char partyId[128];
     int partySize;
     int partyMax;
-
     DiscordPartyPrivacy partyPrivacy;
     char matchSecret[128];
     char joinSecret[128];
     char spectateSecret[128];
+    char emojiName[128];
+    char emojiId[64];
+    bool emojiAnimated;
     bool instance;
-    DiscordActivityFlags flags;
     const DiscordButton* buttons;
 };
 
@@ -117,7 +124,7 @@ static int Pid{0};
 static int Nonce{1};
 
 #ifndef DISCORD_DISABLE_IO_THREAD
-static void Discord_UpdateConnection(DiscordConnectionUpdateType type = Full);
+static void Discord_UpdateConnection(DiscordConnectionUpdateType type = DiscordConnectionUpdateType::Full);
 class IoThreadHolder {
 private:
     std::atomic_bool keepRunning;
@@ -196,20 +203,21 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
         // reads
         if (type != DiscordConnectionUpdateType::WriteOnly) {
             for (;;) {
-                static JsonDocument message;
+                static uint8_t buffer[sizeof(JsonDocument)];
+                std::unique_ptr<JsonDocument, destruct_only_deleter<JsonDocument>> message{new (buffer) JsonDocument};
 
-                if (!Connection->Read(message)) {
+                if (!Connection->Read(*message)) {
                     break;
                 }
 
-                const char* evtName = GetStrMember(&message, "evt");
-                const char* nonce = GetStrMember(&message, "nonce");
+                const char* evtName = GetStrMember(message.get(), "evt");
+                const char* nonce = GetStrMember(message.get(), "nonce");
 
                 if (nonce) {
                     // in responses only -- should use to match up response when needed.
 
                     if (evtName && strcmp(evtName, "ERROR") == 0) {
-                        auto data = GetObjMember(&message, "data");
+                        auto data = GetObjMember(message.get(), "data");
                         LastErrorCode = GetIntMember(data, "code");
                         StringCopy(LastErrorMessage, GetStrMember(data, "message", ""));
                         GotErrorMessage.store(true);
@@ -221,7 +229,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                         continue;
                     }
 
-                    auto data = GetObjMember(&message, "data");
+                    auto data = GetObjMember(message.get(), "data");
 
                     if (strncmp(evtName, "ACTIVITY_", 9) == 0) {
                         const char* activityName = &evtName[9];
@@ -257,6 +265,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                         else if (strcmp(activityName, "INVITE") == 0) {
                             auto inviteReq = InviteQueue.GetNextAddMessage();
                             if (inviteReq) {
+                                memset(inviteReq, 0, sizeof(*inviteReq));
                                 auto user = GetObjMember(data, "user");
                                 auto userId = GetStrMember(user, "id");
                                 auto username = GetStrMember(user, "username");
@@ -274,14 +283,17 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                 if (activity) {
                                     inviteReq->activity.type = (DiscordActivityType)GetIntMember(activity, "type", (int)DiscordActivityType::Playing);
                                     inviteReq->activity.flags = (DiscordActivityFlags)GetIntMember(activity, "flags", (int)DiscordActivityFlags::None);
-                                    StringCopyOptional(inviteReq->activity.state,
-                                                    GetStrMember(activity, "state"));
-                                    StringCopyOptional(inviteReq->activity.stateUrl,
-                                                    GetStrMember(activity, "state_url"));
+                                    inviteReq->activity.statusDisplayType = (DiscordStatusDisplayType)GetIntMember(activity, "status_display_type", (int)DiscordStatusDisplayType::Name);
+                                    StringCopyOptional(inviteReq->activity.name,
+                                                    GetStrMember(activity, "name"));
                                     StringCopyOptional(inviteReq->activity.details,
                                                     GetStrMember(activity, "details"));
                                     StringCopyOptional(inviteReq->activity.detailsUrl,
                                                     GetStrMember(activity, "details_url"));
+                                    StringCopyOptional(inviteReq->activity.state,
+                                                    GetStrMember(activity, "state"));
+                                    StringCopyOptional(inviteReq->activity.stateUrl,
+                                                    GetStrMember(activity, "state_url"));
                                     auto timestamps = GetObjMember(activity, "timestamps");
                                     if (timestamps) {
                                         inviteReq->activity.startTimestamp =
@@ -304,14 +316,26 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                     if (party) {
                                         StringCopyOptional(inviteReq->activity.partyId,
                                                         GetStrMember(party, "id"));
-                                        auto* size0 = GetArrMember(party, "size", 0);
-                                        if (size0 && size0->IsInt()) {
-                                            inviteReq->activity.partySize = size0->GetInt();
+                                        auto size_ = GetAnyMember(party, "size");
+                                        if (size_->IsArray()) {
+                                            auto size = size_->GetArray();
+                                            if (size.Size() >= 2) {
+                                                if (size[0].IsInt()) {
+                                                    inviteReq->activity.partySize = size[0].GetInt();
+                                                }
+                                                if (size[1].IsInt()) {
+                                                    inviteReq->activity.partyMax = size[1].GetInt();
+                                                }
+                                            }
                                         }
-                                        auto* size1 = GetArrMember(party, "size", 1);
-                                        if (size1 && size1->IsInt()) {
-                                            inviteReq->activity.partyMax = size1->GetInt();
-                                        }
+                                    }
+                                    auto emoji = GetObjMember(data, "emoji");
+                                    if (emoji) {
+                                        StringCopyOptional(inviteReq->activity.emojiName,
+                                                        GetStrMember(emoji, "name"));
+                                        StringCopyOptional(inviteReq->activity.emojiId,
+                                                        GetStrMember(emoji, "id"));
+                                        inviteReq->activity.emojiAnimated = GetBoolMember(emoji, "animated");
                                     }
                                 }
                                 inviteReq->type = (DiscordActivityActionType)GetIntMember(data, "type");
@@ -651,11 +675,14 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                 auto& u = req->user;
                 DiscordUser du{u.userId, u.username, u.discriminator, u.globalName, u.avatar};
                 auto& a = req->activity;
-                DiscordRichPresence drp{DiscordActivityType::Playing, // TODO: test 'type' and 'flags' here
-                                        a.state,
-                                        a.stateUrl,
+                DiscordRichPresence drp{a.type,
+                                        a.flags,
+                                        a.statusDisplayType,
+                                        a.name,
                                         a.details,
                                         a.detailsUrl,
+                                        a.state,
+                                        a.stateUrl,
                                         a.startTimestamp,
                                         a.endTimestamp,
                                         a.largeImageKey,
@@ -669,8 +696,10 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                                         nullptr,
                                         nullptr,
                                         nullptr,
+                                        nullptr,
+                                        nullptr,
                                         false,
-                                        DiscordActivityFlags::None,
+                                        false,
                                         nullptr};
                 Handlers.invited(
                   req->type, &du, &drp, req->sessionId, req->channelId, req->messageId);

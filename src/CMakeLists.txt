@@ -15,6 +15,7 @@ set(BASE_RPC_SRC
     connection.h
     backoff.h
     msg_queue.h
+    deleters.h
 )
 
 if (${BUILD_SHARED_LIBS})

@@ -218,6 +218,17 @@ public:
 using JsonValue = rapidjson::GenericValue<UTF8, PoolAllocator>;
 using JsonArray = rapidjson::GenericArray<false, JsonValue>;
 
+inline JsonValue* GetAnyMember(JsonValue* obj, const char* name)
+{
+    if (obj) {
+        auto member = obj->FindMember(name);
+        if (member != obj->MemberEnd()) {
+            return &member->value;
+        }
+    }
+    return nullptr;
+}
+
 inline JsonValue* GetObjMember(JsonValue* obj, const char* name)
 {
     if (obj) {
@@ -253,7 +264,7 @@ inline int GetIntMember(JsonValue* obj, const char* name, int notFoundDefault = 
     return notFoundDefault;
 }
 
-inline int64_t GetInt64Member(JsonValue* obj, const char* name, int notFoundDefault = 0)
+inline int64_t GetInt64Member(JsonValue* obj, const char* name, int64_t notFoundDefault = 0)
 {
     if (obj) {
         auto member = obj->FindMember(name);
@@ -272,6 +283,18 @@ inline const char* GetStrMember(JsonValue* obj,
         auto member = obj->FindMember(name);
         if (member != obj->MemberEnd() && member->value.IsString()) {
             return member->value.GetString();
+        }
+    }
+    return notFoundDefault;
+}
+
+// maybe use std::optional or something for this..
+inline bool GetBoolMember(JsonValue* obj, const char* name, bool notFoundDefault = false)
+{
+    if (obj) {
+        auto member = obj->FindMember(name);
+        if (member != obj->MemberEnd() && member->value.IsBool()) {
+            return member->value.GetBool();
         }
     }
     return notFoundDefault;

@@ -40,6 +40,12 @@ enum class DiscordActivityActionType : int8_t {
     Spectate,
 };
 
+enum class DiscordStatusDisplayType : int8_t {
+    Name,
+    State,
+    Details,
+};
+
 enum class DiscordActivityType : int8_t {
     Playing,
     Streaming,
@@ -69,10 +75,13 @@ typedef struct DiscordButton {
 
 typedef struct DiscordRichPresence {
     DiscordActivityType type;
-    const char* state;      /* max 128 bytes */
-    const char* stateUrl;   /* max 128 bytes */
+    DiscordActivityFlags flags;
+    DiscordStatusDisplayType statusDisplayType;
+    const char* name;       /* max 128 bytes */
     const char* details;    /* max 128 bytes */
     const char* detailsUrl; /* max 128 bytes */
+    const char* state;      /* max 128 bytes */
+    const char* stateUrl;   /* max 128 bytes */
     int64_t startTimestamp;
     int64_t endTimestamp;
     const char* largeImageKey;  /* max 32 bytes */
@@ -86,8 +95,10 @@ typedef struct DiscordRichPresence {
     const char* matchSecret;    /* max 128 bytes */
     const char* joinSecret;     /* max 128 bytes */
     const char* spectateSecret; /* max 128 bytes */
+    const char* emojiName;      /* max 128 bytes */
+    const char* emojiId;        /* max 32 bytes */
+    bool emojiAnimated;
     bool instance;
-    DiscordActivityFlags flags;
     const DiscordButton* buttons;
 } DiscordRichPresence;
 
