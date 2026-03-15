@@ -24,23 +24,23 @@
 extern "C" {
 #endif
 
-enum DiscordJoinResponse : int8_t {
+enum class DiscordJoinResponse : int8_t {
     No,
     Yes,
     Ignore, // same as no
 };
 
-enum DiscordPartyPrivacy : int8_t {
+enum class DiscordPartyPrivacy : int8_t {
     Private,
     Public,
 };
 
-enum DiscordActivityActionType : int8_t {
+enum class DiscordActivityActionType : int8_t {
     Join = 1,
     Spectate,
 };
 
-enum DiscordActivityType : int8_t {
+enum class DiscordActivityType : int8_t {
     Playing,
     Streaming,
     Listening,
@@ -49,14 +49,30 @@ enum DiscordActivityType : int8_t {
     Competing,
 };
 
+enum class DiscordActivityFlags : uint32_t {
+    None                     = 0,
+    Instance                 = 1UL << 0,
+    Join                     = 1UL << 1,
+    Spectate                 = 1UL << 2,
+    JoinRequest              = 1UL << 3,
+    Sync                     = 1UL << 4,
+    Play                     = 1UL << 5,
+    PartyPrivacyFriends      = 1UL << 6,
+    PartyPrivacyVoiceChannel = 1UL << 7,
+    Embedded                 = 1UL << 8,
+};
+
 typedef struct DiscordButton {
     const char* label;
     const char* url;
 } DiscordButton;
 
 typedef struct DiscordRichPresence {
-    const char* state;   /* max 128 bytes */
-    const char* details; /* max 128 bytes */
+    DiscordActivityType type;
+    const char* state;      /* max 128 bytes */
+    const char* stateUrl;   /* max 128 bytes */
+    const char* details;    /* max 128 bytes */
+    const char* detailsUrl; /* max 128 bytes */
     int64_t startTimestamp;
     int64_t endTimestamp;
     const char* largeImageKey;  /* max 32 bytes */
@@ -66,11 +82,12 @@ typedef struct DiscordRichPresence {
     const char* partyId;        /* max 128 bytes */
     int partySize;
     int partyMax;
-    int partyPrivacy;
+    DiscordPartyPrivacy partyPrivacy;
     const char* matchSecret;    /* max 128 bytes */
     const char* joinSecret;     /* max 128 bytes */
     const char* spectateSecret; /* max 128 bytes */
     bool instance;
+    DiscordActivityFlags flags;
     const DiscordButton* buttons;
 } DiscordRichPresence;
 
@@ -98,7 +115,7 @@ typedef struct DiscordEventHandlers {
                     const char* messageId);
 } DiscordEventHandlers;
 
-enum DiscordConnectionUpdateType : int8_t {
+enum class DiscordConnectionUpdateType : int8_t {
     Full,
     ReadOnly,
     WriteOnly,
@@ -115,7 +132,7 @@ DISCORD_EXPORT void Discord_RunCallbacks(void);
 
 /* If you disable the lib starting its own io thread, you'll need to call this from your own */
 #ifdef DISCORD_DISABLE_IO_THREAD
-DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type = Full);
+DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type = DiscordConnectionUpdateType::Full);
 DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void);
 #endif
 

@@ -53,8 +53,11 @@ struct User {
 };
 
 struct Activity {
+    DiscordActivityType type;
     char state[128];
+    char stateUrl[128];
     char details[128];
+    char detailsUrl[128];
     int64_t startTimestamp;
     int64_t endTimestamp;
     char largeImageKey[32];
@@ -70,6 +73,7 @@ struct Activity {
     char joinSecret[128];
     char spectateSecret[128];
     bool instance;
+    DiscordActivityFlags flags;
     const DiscordButton* buttons;
 };
 
@@ -190,7 +194,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
     }
     else {
         // reads
-        if (type != WriteOnly) {
+        if (type != DiscordConnectionUpdateType::WriteOnly) {
             for (;;) {
                 static JsonDocument message;
 
@@ -268,10 +272,16 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                 }
                                 auto activity = GetObjMember(data, "activity");
                                 if (activity) {
+                                    inviteReq->activity.type = (DiscordActivityType)GetIntMember(activity, "type", (int)DiscordActivityType::Playing);
+                                    inviteReq->activity.flags = (DiscordActivityFlags)GetIntMember(activity, "flags", (int)DiscordActivityFlags::None);
                                     StringCopyOptional(inviteReq->activity.state,
                                                     GetStrMember(activity, "state"));
+                                    StringCopyOptional(inviteReq->activity.stateUrl,
+                                                    GetStrMember(activity, "state_url"));
                                     StringCopyOptional(inviteReq->activity.details,
                                                     GetStrMember(activity, "details"));
+                                    StringCopyOptional(inviteReq->activity.detailsUrl,
+                                                    GetStrMember(activity, "details_url"));
                                     auto timestamps = GetObjMember(activity, "timestamps");
                                     if (timestamps) {
                                         inviteReq->activity.startTimestamp =
@@ -316,7 +326,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
         }
 
         // writes
-        if (type != ReadOnly) {
+        if (type != DiscordConnectionUpdateType::ReadOnly) {
             if (UpdatePresence.exchange(false) && QueuedPresence.length) {
                 static QueuedMessage local;
                 {
@@ -641,8 +651,11 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                 auto& u = req->user;
                 DiscordUser du{u.userId, u.username, u.discriminator, u.globalName, u.avatar};
                 auto& a = req->activity;
-                DiscordRichPresence drp{a.state,
+                DiscordRichPresence drp{DiscordActivityType::Playing, // TODO: test 'type' and 'flags' here
+                                        a.state,
+                                        a.stateUrl,
                                         a.details,
+                                        a.detailsUrl,
                                         a.startTimestamp,
                                         a.endTimestamp,
                                         a.largeImageKey,
@@ -652,11 +665,12 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                                         a.partyId,
                                         a.partySize,
                                         a.partyMax,
-                                        0,
+                                        DiscordPartyPrivacy::Private,
                                         nullptr,
                                         nullptr,
                                         nullptr,
-                                        0,
+                                        false,
+                                        DiscordActivityFlags::None,
                                         nullptr};
                 Handlers.invited(
                   req->type, &du, &drp, req->sessionId, req->channelId, req->messageId);

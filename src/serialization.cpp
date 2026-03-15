@@ -105,8 +105,20 @@ size_t JsonWriteRichPresenceObj(char* dest,
             if (presence != nullptr) {
                 WriteObject activity(writer, "activity");
 
+                if (presence->type != DiscordActivityType::Playing) {
+                    WriteKey(writer, "type");
+                    writer.Int((int)presence->type);
+                }
+
+                if (presence->flags != DiscordActivityFlags::None) {
+                    WriteKey(writer, "flags");
+                    writer.Int((int)presence->flags);
+                }
+
                 WriteOptionalString(writer, "state", presence->state);
+                WriteOptionalString(writer, "state_url", presence->stateUrl);
                 WriteOptionalString(writer, "details", presence->details);
+                WriteOptionalString(writer, "details_url", presence->detailsUrl);
 
                 if (presence->startTimestamp || presence->endTimestamp) {
                     WriteObject timestamps(writer, "timestamps");
@@ -134,7 +146,7 @@ size_t JsonWriteRichPresenceObj(char* dest,
                 }
 
                 if ((presence->partyId && presence->partyId[0]) || presence->partySize ||
-                    presence->partyMax || presence->partyPrivacy) {
+                    presence->partyMax || (presence->partyPrivacy != DiscordPartyPrivacy::Private)) {
                     WriteObject party(writer, "party");
                     WriteOptionalString(writer, "id", presence->partyId);
                     if (presence->partySize && presence->partyMax) {
@@ -143,9 +155,9 @@ size_t JsonWriteRichPresenceObj(char* dest,
                         writer.Int(presence->partyMax);
                     }
 
-                    if (presence->partyPrivacy) {
+                    if (presence->partyPrivacy != DiscordPartyPrivacy::Private) {
                         WriteKey(writer, "privacy");
-                        writer.Int(presence->partyPrivacy);
+                        writer.Int((int)presence->partyPrivacy);
                     }
                 }
 
@@ -248,7 +260,7 @@ size_t JsonWriteJoinReply(char* dest, size_t maxLen, const char* userId, Discord
         WriteObject obj(writer);
 
         WriteKey(writer, "cmd");
-        if (reply == Yes) {
+        if (reply == DiscordJoinResponse::Yes) {
             writer.String("SEND_ACTIVITY_JOIN_INVITE");
         }
         else {
@@ -294,7 +306,7 @@ size_t JsonWriteAcceptInvite(char* dest,
             writer.String(userId);
 
             WriteKey(writer, "type");
-            writer.Int(type);
+            writer.Int((int)type);
 
             WriteKey(writer, "session_id");
             writer.String(sessionId);
@@ -331,7 +343,7 @@ size_t JsonWriteOpenOverlayActivityInvite(char* dest,
             WriteObject args(writer);
 
             WriteKey(writer, "type");
-            writer.Int(type);
+            writer.Int((int)type);
 
             // just to make sure?
             WriteKey(writer, "pid");
