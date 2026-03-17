@@ -128,6 +128,8 @@ static int Nonce{1};
 
 #ifndef DISCORD_DISABLE_IO_THREAD
 static void Discord_UpdateConnection(DiscordConnectionUpdateType type = DiscordConnectionUpdateType::Full);
+static void Discord_RunCallbacks(void);
+
 class IoThreadHolder {
 private:
     std::atomic_bool keepRunning;
@@ -142,10 +144,12 @@ public:
         ioThread = std::thread([&]() {
             const std::chrono::duration<int64_t, std::milli> maxWait{500LL};
             Discord_UpdateConnection();
+            Discord_RunCallbacks();
             while (keepRunning.load()) {
                 std::unique_lock<std::mutex> lock(waitForIOMutex);
                 waitForIOActivity.wait_for(lock, maxWait);
                 Discord_UpdateConnection();
+                Discord_RunCallbacks();
             }
         });
     }
@@ -187,9 +191,9 @@ extern "C" DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void)
 #endif
 
 #ifdef DISCORD_DISABLE_IO_THREAD
-extern "C" DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/)
+extern "C" DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = DiscordConnectionUpdateType::Full*/)
 #else
-static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/)
+static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = DiscordConnectionUpdateType::Full*/)
 #endif
 {
     if (!Connection) {
@@ -618,7 +622,11 @@ extern "C" DISCORD_EXPORT void Discord_OpenGuildInvite(const char* code)
     }
 }
 
+#ifdef DISCORD_DISABLE_IO_THREAD
 extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
+#else
+static void Discord_RunCallbacks(void)
+#endif
 {
     // Note on some weirdness: internally we might connect, get other signals, disconnect any number
     // of times inbetween calls here. Externally, we want the sequence to seem sane, so any other

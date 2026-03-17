@@ -141,13 +141,12 @@ DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
                                        const char* optionalSteamId);
 DISCORD_EXPORT void Discord_Shutdown(void);
 
-/* checks for incoming messages, dispatches callbacks */
-DISCORD_EXPORT void Discord_RunCallbacks(void);
-
-/* If you disable the lib starting its own io thread, you'll need to call this from your own */
 #ifdef DISCORD_DISABLE_IO_THREAD
+/* If you disable the lib starting its own io thread, you'll need to call this from your own */
 DISCORD_EXPORT void Discord_UpdateConnection(DiscordConnectionUpdateType type = DiscordConnectionUpdateType::Full);
 DISCORD_EXPORT bool Discord_ConnectionHasPendingSends(void);
+/* checks for incoming messages, dispatches callbacks */
+DISCORD_EXPORT void Discord_RunCallbacks(void);
 #endif
 
 DISCORD_EXPORT void Discord_UpdatePresence(const DiscordRichPresence* presence);
