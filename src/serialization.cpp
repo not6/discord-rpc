@@ -142,13 +142,19 @@ size_t JsonWriteRichPresenceObj(char* dest,
 
                 if ((presence->largeImageKey && presence->largeImageKey[0]) ||
                     (presence->largeImageText && presence->largeImageText[0]) ||
+                    (presence->largeImageUrl && presence->largeImageUrl[0]) || // should this condition be here?
                     (presence->smallImageKey && presence->smallImageKey[0]) ||
-                    (presence->smallImageText && presence->smallImageText[0])) {
+                    (presence->smallImageText && presence->smallImageText[0]) ||
+                    (presence->smallImageUrl && presence->smallImageUrl[0]) || // should this condition be here?
+                    (presence->inviteCoverImageKey && presence->inviteCoverImageKey[0])) {
                     WriteObject assets(writer, "assets");
                     WriteOptionalString(writer, "large_image", presence->largeImageKey);
                     WriteOptionalString(writer, "large_text", presence->largeImageText);
+                    WriteOptionalString(writer, "large_url", presence->largeImageUrl);
                     WriteOptionalString(writer, "small_image", presence->smallImageKey);
                     WriteOptionalString(writer, "small_text", presence->smallImageText);
+                    WriteOptionalString(writer, "small_url", presence->smallImageUrl);
+                    WriteOptionalString(writer, "invite_cover_image", presence->inviteCoverImageKey);
                 }
 
                 if ((presence->partyId && presence->partyId[0]) || presence->partySize ||
@@ -167,6 +173,7 @@ size_t JsonWriteRichPresenceObj(char* dest,
                     }
                 }
 
+                /*
                 if ((presence->emojiName && presence->emojiName[0]) ||
                     (presence->emojiId && presence->emojiId[0]) || presence->emojiAnimated) {
                     WriteObject emoji(writer, "emoji");
@@ -178,9 +185,26 @@ size_t JsonWriteRichPresenceObj(char* dest,
                         writer.Bool(presence->emojiAnimated);
                     }
                 }
+                */
 
-                // Send secrets only when buttons aren't set
-                if (!presence->buttons) {
+                if ((presence->buttons[0].label && presence->buttons[0].label[0]) ||
+                    (presence->buttons[1].label && presence->buttons[1].label[0])) {
+                    WriteArray buttons(writer, "buttons");
+
+                    for (uint8_t i = 0; i < 2; i++) {
+                        const DiscordButton& btn = presence->buttons[i];
+
+                        if (!btn.label || !btn.label[0])
+                            break;
+
+                        WriteObject button(writer);
+                        WriteKey(writer, "label");
+                        writer.String(btn.label);
+                        WriteOptionalString(writer, "url", btn.url);
+                    }
+                }
+                else {
+                    // Send secrets only when buttons aren't set
                     if ((presence->matchSecret && presence->matchSecret[0]) ||
                         (presence->joinSecret && presence->joinSecret[0]) ||
                         (presence->spectateSecret && presence->spectateSecret[0])) {
@@ -194,23 +218,6 @@ size_t JsonWriteRichPresenceObj(char* dest,
                 if (presence->instance) {
                     writer.Key("instance");
                     writer.Bool(presence->instance);
-                }
-
-                if (presence->buttons) {
-                    WriteArray buttons(writer, "buttons");
-
-                    for (uint8_t i = 0; true; i++) {
-                        const DiscordButton& btn = presence->buttons[i];
-
-                        if (!btn.label || !btn.label[0])
-                            break;
-
-                        WriteObject button(writer);
-                        WriteKey(writer, "url");
-                        writer.String(btn.url);
-                        WriteKey(writer, "label");
-                        writer.String(btn.label);
-                    }
                 }
             }
         }

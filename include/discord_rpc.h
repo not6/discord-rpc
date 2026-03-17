@@ -84,22 +84,25 @@ typedef struct DiscordRichPresence {
     const char* stateUrl;   /* max 128 bytes */
     int64_t startTimestamp;
     int64_t endTimestamp;
-    const char* largeImageKey;  /* max 32 bytes */
-    const char* largeImageText; /* max 128 bytes */
-    const char* smallImageKey;  /* max 32 bytes */
-    const char* smallImageText; /* max 128 bytes */
-    const char* partyId;        /* max 128 bytes */
+    const char* largeImageKey;       /* max 32 bytes */
+    const char* largeImageText;      /* max 128 bytes */
+    const char* largeImageUrl;       /* max 128 bytes */
+    const char* smallImageKey;       /* max 32 bytes */
+    const char* smallImageText;      /* max 128 bytes */
+    const char* smallImageUrl;       /* max 128 bytes */
+    const char* inviteCoverImageKey; /* max 32 bytes */
+    const char* partyId;             /* max 128 bytes */
     int partySize;
     int partyMax;
     DiscordPartyPrivacy partyPrivacy;
     const char* matchSecret;    /* max 128 bytes */
     const char* joinSecret;     /* max 128 bytes */
     const char* spectateSecret; /* max 128 bytes */
-    const char* emojiName;      /* max 128 bytes */
-    const char* emojiId;        /* max 32 bytes */
-    bool emojiAnimated;
+    //const char* emojiName;      /* DOESN'T DO ANYTHING */  /* max 128 bytes */
+    //const char* emojiId;        /* DOESN'T DO ANYTHING */  /* max 32 bytes */
+    //bool emojiAnimated;         /* DOESN'T DO ANYTHING */
     bool instance;
-    const DiscordButton* buttons;
+    DiscordButton buttons[2];
 } DiscordRichPresence;
 
 typedef struct DiscordUser {

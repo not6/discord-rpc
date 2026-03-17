@@ -66,22 +66,25 @@ struct Activity {
     char stateUrl[128];
     int64_t startTimestamp;
     int64_t endTimestamp;
-    char largeImageKey[32];
-    char largeImageText[128];
-    char smallImageKey[32];
-    char smallImageText[128];
+    //char largeImageKey[32];
+    //char largeImageText[128];
+    //char largeImageUrl[128];
+    //char smallImageKey[32];
+    //char smallImageText[128];
+    //char smallImageUrl[128];
+    //char inviteCoverImageKey[32];
     char partyId[128];
     int partySize;
     int partyMax;
-    DiscordPartyPrivacy partyPrivacy;
-    char matchSecret[128];
-    char joinSecret[128];
-    char spectateSecret[128];
-    char emojiName[128];
-    char emojiId[64];
-    bool emojiAnimated;
-    bool instance;
-    const DiscordButton* buttons;
+    //DiscordPartyPrivacy partyPrivacy;
+    //char matchSecret[128];
+    //char joinSecret[128];
+    //char spectateSecret[128];
+    //char emojiName[128];
+    //char emojiId[64];
+    //bool emojiAnimated;
+    //bool instance;
+    //DiscordButton buttons[2];
 };
 
 struct Invite {
@@ -301,17 +304,25 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                         inviteReq->activity.endTimestamp =
                                         GetInt64Member(timestamps, "end");
                                     }
+                                    /*
                                     auto assets = GetObjMember(activity, "assets");
                                     if (assets) {
                                         StringCopyOptional(inviteReq->activity.largeImageKey,
                                                         GetStrMember(assets, "large_image"));
                                         StringCopyOptional(inviteReq->activity.largeImageText,
                                                         GetStrMember(assets, "large_text"));
+                                        StringCopyOptional(inviteReq->activity.largeImageUrl,
+                                                        GetStrMember(assets, "large_url"));
                                         StringCopyOptional(inviteReq->activity.smallImageKey,
                                                         GetStrMember(assets, "small_image"));
                                         StringCopyOptional(inviteReq->activity.smallImageText,
                                                         GetStrMember(assets, "small_text"));
+                                        StringCopyOptional(inviteReq->activity.smallImageUrl,
+                                                        GetStrMember(assets, "small_url"));
+                                        StringCopyOptional(inviteReq->activity.inviteCoverImageKey,
+                                                        GetStrMember(assets, "invite_cover_image"));
                                     }
+                                    */
                                     auto party = GetObjMember(activity, "party");
                                     if (party) {
                                         StringCopyOptional(inviteReq->activity.partyId,
@@ -329,6 +340,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                             }
                                         }
                                     }
+                                    /*
                                     auto emoji = GetObjMember(data, "emoji");
                                     if (emoji) {
                                         StringCopyOptional(inviteReq->activity.emojiName,
@@ -337,6 +349,17 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Full*/
                                                         GetStrMember(emoji, "id"));
                                         inviteReq->activity.emojiAnimated = GetBoolMember(emoji, "animated");
                                     }
+                                    */
+                                    /*
+                                    // need to change the Activity struct for this
+                                    auto buttons = GetObjMember(data, "buttons");
+                                    if (buttons) {
+                                        StringCopyOptional(inviteReq->activity.buttons[0].label,
+                                                        GetStrMember(buttons, "label"));
+                                        StringCopyOptional(inviteReq->activity.buttons[0].url,
+                                                        GetStrMember(buttons, "url"));
+                                    }
+                                    */
                                 }
                                 inviteReq->type = (DiscordActivityActionType)GetIntMember(data, "type");
                                 StringCopyOptional(inviteReq->channelId, GetStrMember(user, "channel_id"));
@@ -685,10 +708,13 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                                         a.stateUrl,
                                         a.startTimestamp,
                                         a.endTimestamp,
-                                        a.largeImageKey,
-                                        a.largeImageText,
-                                        a.smallImageKey,
-                                        a.smallImageText,
+                                        nullptr, // a.largeImageKey,
+                                        nullptr, // a.largeImageText,
+                                        nullptr, // a.largeImageUrl,
+                                        nullptr, // a.smallImageKey,
+                                        nullptr, // a.smallImageText,
+                                        nullptr, // a.smallImageUrl,
+                                        nullptr, // a.inviteCoverImageKey,
                                         a.partyId,
                                         a.partySize,
                                         a.partyMax,
@@ -696,9 +722,9 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                                         nullptr,
                                         nullptr,
                                         nullptr,
-                                        nullptr,
-                                        nullptr,
-                                        false,
+                                        //nullptr,
+                                        //nullptr,
+                                        //false,
                                         false,
                                         nullptr};
                 Handlers.invited(
