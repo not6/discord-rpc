@@ -210,7 +210,7 @@ static void Discord_UpdateConnection(DiscordConnectionUpdateType type/* = Discor
         // reads
         if (type != DiscordConnectionUpdateType::WriteOnly) {
             for (;;) {
-                static uint8_t buffer[sizeof(JsonDocument)];
+                static alignas(JsonDocument) uint8_t buffer[sizeof(JsonDocument)];
                 std::unique_ptr<JsonDocument, destruct_only_deleter<JsonDocument>> message{new (buffer) JsonDocument};
 
                 if (!Connection->Read(*message)) {
